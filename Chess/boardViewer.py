@@ -2,16 +2,28 @@ import pygame
 from pygame.locals import *
 pygame.init()
 from board import Board
+from pieces import getImage, Queen, Bishop, Rook, Knight
 
 
 class BoardViewer:
 
-    SIZE = 100
+    SIZE = 60
+    PROMOTION_PIECES = "qbrk"
 
     def __init__(self, screen, board):
         self.board: Board = board
         self.screen: pygame.Surface = screen
         self.setup_game()
+        self.promoteSurfaces = self.createPromoteSurface(0), self.createPromoteSurface(1)
+        self.isPromoting = False
+
+    def createPromoteSurface(self, team):
+        surface = pygame.Surface((self.SIZE * 4, self.SIZE))
+        if team:
+            surface.fill((255, 255, 255))
+        for i, piece in enumerate("qbrk" if not team else "QBRK"):
+            surface.blit(getImage(piece, team), (i * self.SIZE, 0))
+        return surface
 
     def setup_game(self):
         self.selectedSquare: tuple[(int, int)] | None = None
@@ -49,6 +61,8 @@ class BoardViewer:
             rect.center = (self.SIZE * 5, self.SIZE * 5)
             pygame.draw.rect(self.screen, (0, 0, 0), rect)
             self.screen.blit(text, rect)
+        if self.isPromoting:
+            self.screen.blit(self.promoteSurfaces[self.turn - 1], (self.SIZE * 2.5, self.SIZE * 4.5))
         pygame.display.flip()
 
     def show_captures(self, player, y):
@@ -77,6 +91,14 @@ class BoardViewer:
                     exit()
                     pygame.quit()
                 if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                    if self.isPromoting:
+                        x, y = (event.pos[0] - 2.5 * self.SIZE) // self.SIZE, \
+                               (event.pos[1] - self.SIZE * 4.5) // self.SIZE
+                        print(x, y)
+                        if y == 0 and 0 <= x < 4:
+                            self.board.promotePawn(*self.isPromoting,  self.PROMOTION_PIECES[int(x)])
+                            self.isPromoting = False
+                        continue
                     if self.gameStatus is not None:
                         self.board = Board()
                         self.setup_game()
@@ -90,7 +112,9 @@ class BoardViewer:
                         x1, y1 = event.pos[0] // self.SIZE, event.pos[1] // self.SIZE - 1
                         if (x1, y1) in self.board.getPieceAt(x, y).getMovableSquares(self.board, x, y):
                             piece = self.board.movePiece(x, y, x1, y1)
-                            if piece is not None:
+                            if piece == "Promotion":
+                                self.isPromoting = (x1, y1, self.turn)
+                            elif piece is not None:
                                 self.captures[self.turn].append(piece)
                             self.turn = (self.turn + 1) % 2
                             self.gameStatus = self.board.checkForWin(self.turn)

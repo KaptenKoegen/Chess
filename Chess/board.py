@@ -40,6 +40,8 @@ class Board:
         self.updatePieceMoves()
         if isRealMove:
             self.squares[y1][x1].hasMoved = True
+            if self.checkForPromotion(x1, y1):
+                return "Promotion"
         return temp
 
     def updatePieceMoves(self):
@@ -78,6 +80,12 @@ class Board:
                         piece.getMovableSquares(self, x, y):
                     return
         return "Checkmate" if isChecked else "Stalemate"
+
+    def checkForPromotion(self, x, y):
+        return isinstance(self.squares[y][x], pieces.Pawn) and y in {0, 7}
+
+    def promotePawn(self, x, y, team, piece):
+        self.squares[y][x] = self.PIECES[piece](team, piece)
 
     def scaleImages(self, size):
         for y in range(8):
