@@ -64,8 +64,10 @@ class Pawn(Piece):
         self._attackingSquares = {pos for pos in self._attackingSquares if board.isInbounds(pos)}
 
     def getMovableSquares(self, board, x, y):
-        captureMoves = {pos for pos in self._attackingSquares if board.canMoveTo(x, y, *pos) and
-                        (piece := board.getPieceAt(*pos)) is not None and piece.color != self.color}
+        captureMoves = {pos for pos in self._attackingSquares
+                        if (board.canMoveTo(x, y, *pos) and
+                            (piece := board.getPieceAt(*pos)) is not None and piece.color != self.color)
+                        or board.canEnPeasant(*pos)}
         d = 1 if self.color == Color.BLACK else -1
         if board.getPieceAt(x, y + 1 * d) is None and board.canMoveTo(x, y, x, y + 1 * d):
             captureMoves.add((x, y + 1 * d))
@@ -110,6 +112,14 @@ class King(Piece):
         self._attackingSquares.clear()
         self.calcDiagonalMoves(board, array([x, y]), 1)
         self.calcOrthogonalMoves(board, array([x, y]), 1)
+
+    def getMovableSquares(self, board, x, y):
+        squares = super().getMovableSquares(board, x, y)
+        if board.canCastle(self.color, 0):
+            squares.add((x - 2, y))
+        if board.canCastle(self.color, 7):
+            squares.add((x + 2, y))
+        return squares
 
     def isKing(self):
         return True
